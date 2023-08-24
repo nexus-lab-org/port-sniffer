@@ -5,7 +5,7 @@ edition = "2021"
 authors = ["NexusLab <asifiqbal7.iitkgp@gmail.com>"]
 description = "A port sniffer written in Rust"
 license = "MIT"
-repository = ""
+repository = "https://github.com/nexus-lab-org/port-sniffer"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
