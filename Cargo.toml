@@ -6,7 +6,6 @@ authors = ["NexusLab <asifiqbal7.iitkgp@gmail.com>"]
 description = "A port sniffer written in Rust"
 license = "MIT"
 repository = ""
-readme = ""
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
