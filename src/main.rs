@@ -7,22 +7,26 @@ use std::thread;
 use std::time::Duration;
 
 const MAX_PORT: u32 = 65535;
+const DEFAULT_TIMEOUT: u32 = 2;
 
 #[derive(Parser)]
 #[clap(author, version, about, long_about = None)]
 struct Cli {
     /// IP address
-    #[clap(short='i', long="ip")]
+    #[clap(short = 'i', long = "ip")]
     ip: Option<IpAddr>,
 
     /// Number of threads
-    #[clap(short='t', long="threads", default_value = "10")]
+    #[clap(short = 't', long = "threads", default_value_t = DEFAULT_TIMEOUT)]
     threads: u32,
 
     /// Domain name
     #[clap(long)]
     domain: Option<String>,
 
+    // Expected Timeout over each TCP connect
+    #[clap(long, default_value = "10")]
+    timeout: u64,
 }
 
 fn main() {
@@ -63,17 +67,13 @@ fn main() {
         }
     };
 
-    println!(
-        "Scanning {} with {:?} threads",
-        ip_addr,
-        cli.threads
-    );
+    println!("Scanning {} with {:?} threads", ip_addr, cli.threads);
     let (tx, rx) = channel::<u32>();
 
     for i in 0..cli.threads {
         let tx = tx.clone();
         thread::spawn(move || {
-            scan(tx, i, ip_addr, cli.threads);
+            scan(tx, i, ip_addr, cli.threads, cli.timeout);
         });
     }
     drop(tx);
@@ -90,20 +90,18 @@ fn hostname_to_ip(hostname: &str) -> Result<Vec<IpAddr>, std::io::Error> {
     lookup_host(hostname)
 }
 
-fn scan(tx: Sender<u32>, start_port: u32, addr: IpAddr, threads: u32) {
+fn scan(tx: Sender<u32>, start_port: u32, addr: IpAddr, threads: u32, timeout: u64) {
     let mut port: u32 = start_port + 1;
-    let duration = Duration::new(10, 0);
+    let duration = Duration::new(timeout, 0);
     loop {
         let address = format!("{}:{}", addr, port);
         let socket_add = address.to_socket_addrs().unwrap().next().unwrap();
-        match TcpStream::connect_timeout(&socket_add, duration) {
-            Ok(_) => {
-                print!(".");
-                io::stdout().flush().unwrap();
-                tx.send(port).unwrap();
-            }
-            Err(_) => {}
+        if TcpStream::connect_timeout(&socket_add, duration).is_ok() {
+            print!(".");
+            io::stdout().flush().unwrap();
+            tx.send(port).unwrap();
         }
+
         if (MAX_PORT - port) <= threads {
             break;
         }
