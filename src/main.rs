@@ -1,8 +1,9 @@
-use std::net::{IpAddr, TcpStream};
+use std::net::{IpAddr, TcpStream, ToSocketAddrs};
 use std::sync::mpsc::{channel, Sender};
 use std::thread;
 use std::io::{self, Write};
 use clap::Parser;
+use std::time::Duration;
 
 const MAX_PORT: u32 = 65535;
 
@@ -38,9 +39,11 @@ fn main() {
 
 fn scan(tx: Sender<u32>, start_port: u32, addr: IpAddr, threads: u32) {
     let mut port: u32 = start_port + 1;
+    let duration = Duration::new(10, 0);
     loop {
         let address = format!("{}:{}", addr, port);
-        match TcpStream::connect(address) {
+        let socket_add = address.to_socket_addrs().unwrap().next().unwrap();
+        match TcpStream::connect_timeout(&socket_add, duration) {
             Ok(_) => {
                 print!(".");
                 io::stdout().flush().unwrap();
