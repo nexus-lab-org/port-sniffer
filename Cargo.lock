@@ -67,6 +67,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "cfg-if"
+version = "1.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "baf1de4339761588bc0619e3cbc0120ee582ebb74b53b4efbf79117bd2da40fd"
+
+[[package]]
 name = "clap"
 version = "4.3.22"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -112,6 +118,18 @@ name = "colorchoice"
 version = "1.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "acbf1af155f9b9ef647e42cdc158db4b64a1b61f743629225fde6f3e0be2a7c7"
+
+[[package]]
+name = "dns-lookup"
+version = "2.0.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "8d0fa3cd8dc96ada974e126a940d37d4079bbbe6a24aca15b1113c2f362441c5"
+dependencies = [
+ "cfg-if",
+ "libc",
+ "socket2",
+ "windows-sys",
+]
 
 [[package]]
 name = "errno"
@@ -174,6 +192,7 @@ name = "nexuslab_port_sniffer"
 version = "0.1.0"
 dependencies = [
  "clap",
+ "dns-lookup",
 ]
 
 [[package]]
@@ -210,6 +229,16 @@ dependencies = [
  "errno",
  "libc",
  "linux-raw-sys",
+ "windows-sys",
+]
+
+[[package]]
+name = "socket2"
+version = "0.5.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "4031e820eb552adee9295814c0ced9e5cf38ddf1e8b7d566d6de8e2538ea989e"
+dependencies = [
+ "libc",
  "windows-sys",
 ]
 
