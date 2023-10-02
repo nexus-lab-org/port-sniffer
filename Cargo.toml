@@ -11,3 +11,4 @@ repository = "https://github.com/nexus-lab-org/port-sniffer"
 
 [dependencies]
 clap = { version = "4.3.22", features = ["derive"] }
+dns-lookup = "2.0.3"
