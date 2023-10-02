@@ -7,6 +7,7 @@ use std::thread;
 use std::time::Duration;
 
 const MAX_PORT: u32 = 65535;
+const DEFAULT_TIMEOUT: u32 = 2;
 
 #[derive(Parser)]
 #[clap(author, version, about, long_about = None)]
@@ -16,7 +17,7 @@ struct Cli {
     ip: Option<IpAddr>,
 
     /// Number of threads
-    #[clap(short = 't', long = "threads", default_value = "10")]
+    #[clap(short = 't', long = "threads", default_value_t = DEFAULT_TIMEOUT)]
     threads: u32,
 
     /// Domain name
