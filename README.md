@@ -2,6 +2,14 @@
 
 Port Sniffer is a command-line tool built with Rust that helps you find all the open ports on a given host. It uses native OS threads to try all the ports concurrently, making it faster than sequential port scanning tools.
 
+## Table of Contents
+
+- [Installation](#installation)
+- [Usage](#usage)
+- [Contributors](#contributors)
+- [License](#license)
+
+
 ## Installation
 
 You can install Port Sniffer using [Cargo](https://doc.rust-lang.org/cargo/), the Rust package manager. First, make sure you have Rust installed on your system. Then, run the following command:
@@ -21,6 +29,12 @@ port-sniffer 127.0.0.1
 ```
 
 This will scan all the ports on `127.0.0.1` and print the open ones to the console.
+
+## Contributors
+
+<a href="https://github.com/nexus-lab-org/port-sniffer/graphs/contributors">
+  <img src="https://contrib.rocks/image?repo=nexus-lab-org/port-sniffer" />
+</a>
 
 ## License
 
