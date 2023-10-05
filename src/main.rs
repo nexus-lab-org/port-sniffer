@@ -1,15 +1,13 @@
-mod constants;
 
 use clap::Parser;
 use nexuslab_port_sniffer::models::IpOrDomain;
+use nexuslab_port_sniffer::constants::{DEFAULT_THREADS, DEFAULT_TIMEOUT, MAX_PORT, MIN_PORT};
 use std::io::{self, Write};
 use std::net::{IpAddr, TcpStream, ToSocketAddrs};
 use std::sync::mpsc::{channel, Sender};
 use std::sync::Arc;
 use std::thread;
 use std::time::Duration;
-use constants::{DEFAULT_THREADS, DEFAULT_TIMEOUT, MIN_PORT, MAX_PORT};
-
 
 #[derive(Parser)]
 #[clap(author, version, about, long_about = None)]
