@@ -1,7 +1,6 @@
-
 use clap::Parser;
-use nexuslab_port_sniffer::models::IpOrDomain;
 use nexuslab_port_sniffer::constants::{DEFAULT_THREADS, DEFAULT_TIMEOUT, MAX_PORT, MIN_PORT};
+use nexuslab_port_sniffer::models::{IpOrDomain, Ports};
 use std::io::{self, Write};
 use std::net::{IpAddr, TcpStream, ToSocketAddrs};
 use std::sync::mpsc::{channel, Sender};
@@ -27,8 +26,8 @@ struct Cli {
     /// Ports to be scanned (optional,
     /// if unspecified, all ports will be
     /// scanned)
-    #[clap(long, num_args=1..)]
-    ports: Option<Vec<u32>>,
+    #[clap(short = 'p', long, num_args=1..)]
+    ports: Option<Ports>,
 }
 
 fn main() {
@@ -42,30 +41,9 @@ fn main() {
         }
     };
 
-    // The ports to scan
-    let ports_to_scan: Arc<Vec<u32>> = match &cli.ports {
-        Some(ports) => {
-            // Some ports have been specified
-            // on the command line
-            let mut valid_ports: Vec<u32> = Vec::new();
-            for port in ports {
-                if (MIN_PORT..MAX_PORT).contains(port) {
-                    valid_ports.push(*port);
-                } else {
-                    // Invalid port number
-                    eprintln!(
-                        "Invalid port number specified. Port numbers should be in the range: {}-{}",
-                        MIN_PORT, MAX_PORT
-                    );
-                    return;
-                }
-            }
-            Arc::new(valid_ports)
-        }
-        None => {
-            // No ports specified, scan all
-            Arc::new((MIN_PORT..MAX_PORT + 1).collect())
-        }
+    let ports_to_scan: Arc<Vec<u32>> = match cli.ports {
+        Some(ports) => Arc::new(ports.0),
+        None => Arc::new((MIN_PORT..MAX_PORT + 1).collect()),
     };
 
     println!("Scanning {} with {:?} threads", ip_addr, cli.threads);
