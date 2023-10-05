@@ -1,7 +1,7 @@
 mod constants;
 
 use clap::Parser;
-use dns_lookup::lookup_host;
+use nexuslab_port_sniffer::models::IpOrDomain;
 use std::io::{self, Write};
 use std::net::{IpAddr, TcpStream, ToSocketAddrs};
 use std::sync::mpsc::{channel, Sender};
@@ -14,17 +14,13 @@ use constants::{DEFAULT_THREADS, DEFAULT_TIMEOUT, MIN_PORT, MAX_PORT};
 #[derive(Parser)]
 #[clap(author, version, about, long_about = None)]
 struct Cli {
-    /// IP address
-    #[clap(short = 'i', long = "ip")]
-    ip: Option<IpAddr>,
+    /// IP address or domain name. Domain name will be looked up and resolved to ip
+    #[clap(index = 1)]
+    ip_or_domain: IpOrDomain,
 
     /// Number of threads
     #[clap(short = 't', long = "threads", default_value_t = DEFAULT_THREADS)]
     threads: u32,
-
-    /// Domain name
-    #[clap(long)]
-    domain: Option<String>,
 
     /// Expected Timeout over each TCP connect
     #[clap(long, default_value_t = DEFAULT_TIMEOUT)]
@@ -40,38 +36,11 @@ struct Cli {
 fn main() {
     let cli = Cli::parse();
 
-    let ip_addr = match (&cli.ip, &cli.domain) {
-        (Some(ip), _) => Some(*ip),
-        (_, Some(domain)) => {
-            match hostname_to_ip(domain) {
-                Ok(ips) => {
-                    let mut resolved_ip_addr: Option<IpAddr> = None;
-                    for ip in ips {
-                        if let IpAddr::V4(_ipv4) = ip {
-                            // here ipv4 is of type IpV4Addr
-                            resolved_ip_addr = Some(ip);
-                            break;
-                        }
-                    }
-                    resolved_ip_addr
-                }
-
-                Err(e) => {
-                    eprintln!("Error getting the IP: {}", e);
-                    None
-                }
-            }
-        }
-        _ => {
-            eprintln!("Either 'ip' or 'domain' must be provided");
-            return; // Print error and return from the function
-        }
-    };
-
-    let ip_addr = match ip_addr {
-        Some(ip) => ip,
+    let ip_addr = match cli.ip_or_domain.resolve_to_ip() {
+        Some(ip_addr) => ip_addr,
         None => {
-            return; // Exit
+            eprintln!("Invalid domain or ip provided, please provide a valid one");
+            return;
         }
     };
 
@@ -125,10 +94,6 @@ fn main() {
             println!("{} is open", port);
         }
     }
-}
-
-fn hostname_to_ip(hostname: &str) -> Result<Vec<IpAddr>, std::io::Error> {
-    lookup_host(hostname)
 }
 
 fn scan(
