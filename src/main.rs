@@ -82,15 +82,15 @@ fn main() {
             // on the command line
             let mut valid_ports: Vec<u32> = Vec::new();
             for port in ports {
-                if *port < MIN_PORT || *port > MAX_PORT {
+                if (MIN_PORT..MAX_PORT).contains(port) {
+                    valid_ports.push(*port);
+                } else {
                     // Invalid port number
                     eprintln!(
                         "Invalid port number specified. Port numbers should be in the range: {}-{}",
                         MIN_PORT, MAX_PORT
                     );
                     return;
-                } else {
-                    valid_ports.push(*port);
                 }
             }
             Arc::new(valid_ports)
