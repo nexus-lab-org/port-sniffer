@@ -1,3 +1,5 @@
+mod constants;
+
 use clap::Parser;
 use dns_lookup::lookup_host;
 use std::io::{self, Write};
@@ -6,10 +8,8 @@ use std::sync::mpsc::{channel, Sender};
 use std::sync::Arc;
 use std::thread;
 use std::time::Duration;
+use constants::{DEFAULT_THREADS, DEFAULT_TIMEOUT, MIN_PORT, MAX_PORT};
 
-const MIN_PORT: u32 = 0;
-const MAX_PORT: u32 = 65535;
-const DEFAULT_TIMEOUT: u32 = 2;
 
 #[derive(Parser)]
 #[clap(author, version, about, long_about = None)]
@@ -19,7 +19,7 @@ struct Cli {
     ip: Option<IpAddr>,
 
     /// Number of threads
-    #[clap(short = 't', long = "threads", default_value_t = DEFAULT_TIMEOUT)]
+    #[clap(short = 't', long = "threads", default_value_t = DEFAULT_THREADS)]
     threads: u32,
 
     /// Domain name
@@ -27,7 +27,7 @@ struct Cli {
     domain: Option<String>,
 
     /// Expected Timeout over each TCP connect
-    #[clap(long, default_value = "10")]
+    #[clap(long, default_value_t = DEFAULT_TIMEOUT)]
     timeout: u64,
 
     /// Ports to be scanned (optional,
