@@ -73,6 +73,13 @@ impl FromStr for Ports {
             let start = parts[0].parse::<u32>().map_err(|e| e.to_string())?;
             let end = parts[1].parse::<u32>().map_err(|e| e.to_string())?;
 
+            if end > MAX_PORT {
+                return Err(format!(
+                    "Invalid port rage: start and end must be within the limits of {}-{}",
+                    MIN_PORT, MAX_PORT
+                ));
+            }
+
             if start >= end {
                 return Err(String::from("Invalid range: start must be less than end"));
             }
