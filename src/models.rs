@@ -75,7 +75,7 @@ impl FromStr for Ports {
 
             if end > MAX_PORT {
                 return Err(format!(
-                    "Invalid port rage: start and end must be within the limits of {}-{}",
+                    "Invalid port range: start and end must be within the limits of {}-{}",
                     MIN_PORT, MAX_PORT
                 ));
             }
