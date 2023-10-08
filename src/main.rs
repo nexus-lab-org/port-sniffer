@@ -77,7 +77,7 @@ fn scan(
     ports_to_scan: Arc<Vec<u32>>,
     start_port_index: u32,
     addr: IpAddr,
-    threads: u32,
+    total_threads: u32,
     timeout: u64,
 ) {
     // This function scans ports at positions
@@ -100,6 +100,6 @@ fn scan(
             io::stdout().flush().unwrap();
             tx.send(port).unwrap();
         }
-        port_index += threads;
+        port_index += total_threads;
     }
 }

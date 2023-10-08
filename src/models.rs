@@ -54,7 +54,7 @@ impl FromStr for IpOrDomain {
     }
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct Ports(pub Vec<u32>);
 
 impl FromStr for Ports {
@@ -84,7 +84,7 @@ impl FromStr for Ports {
                 return Err(String::from("Invalid range: start must be less than end"));
             }
 
-            Ok(Ports((start..end).collect()))
+            Ok(Ports((start..end+1).collect()))
         } else {
             let list: Result<Vec<u32>, _> = s
                 .split_whitespace()
@@ -105,5 +105,63 @@ impl FromStr for Ports {
                 Err(e) => Err(e),
             }
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use std::net::Ipv4Addr;
+
+    use super::*;
+
+    #[test]
+    fn test_from_str() {
+        // Test valid port list
+        let input = "80 443 8080";
+        let expected_output = Ports(vec![80, 443, 8080]);
+        assert_eq!(Ports::from_str(input).unwrap(), expected_output);
+
+        // Test valid port range
+        let input = "1000-2000";
+        let expected_output = Ports((1000..2001).collect());
+        assert_eq!(Ports::from_str(input).unwrap(), expected_output);
+
+        // Test invalid port range
+        let input = "2000-1000";
+        let expected_error = "Invalid range: start must be less than end";
+        assert_eq!(Ports::from_str(input).unwrap_err(), expected_error);
+
+        // Test invalid port number
+        let input = "65536";
+        let expected_error = "Invalid port number specified. Port numbers should be in the range: 0-65535";
+        assert_eq!(Ports::from_str(input).unwrap_err(), expected_error);
+
+        // Test invalid range format
+        let input = "1000-2000-3000";
+        let expected_error = "Invalid range format. Expected format: start-end";
+        assert_eq!(Ports::from_str(input).unwrap_err(), expected_error);
+
+        // Test invalid port range
+        let input = "65535-65536";
+        let expected_error = "Invalid port range: start and end must be within the limits of 0-65535";
+        assert_eq!(Ports::from_str(input).unwrap_err(), expected_error);
+    }
+
+    #[test]
+    fn test_resolve_to_ip() {
+        // Test IP address
+        let input = IpOrDomain::Ip(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)));
+        let expected_output = Some(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)));
+        assert_eq!(input.resolve_to_ip(), expected_output);
+
+        // Test domain name with IPv4 address
+        let input = IpOrDomain::Domain("example.com".to_string());
+        let expected_output = Some(IpAddr::V4(Ipv4Addr::new(93, 184, 216, 34)));
+        assert_eq!(input.resolve_to_ip(), expected_output);
+
+        // Test invalid domain name
+        let input = IpOrDomain::Domain("invalid-domain-name".to_string());
+        let expected_output = None;
+        assert_eq!(input.resolve_to_ip(), expected_output);
     }
 }
