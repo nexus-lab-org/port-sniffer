@@ -4,7 +4,7 @@ use nexuslab_port_sniffer::constants::{DEFAULT_THREADS, DEFAULT_TIMEOUT, MAX_POR
 use nexuslab_port_sniffer::models::{IpOrDomain, Ports};
 use std::io::{self, Write};
 use std::net::{IpAddr, TcpStream, ToSocketAddrs};
-use std::sync::atomic::{AtomicUsize, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
 use std::sync::mpsc::{channel, Sender};
 use std::sync::Arc;
 use std::sync::Mutex;
@@ -46,7 +46,7 @@ fn main() {
 
     let ports_to_scan: Arc<Vec<u32>> = match cli.ports {
         Some(ports) => Arc::new(ports.0),
-        None => Arc::new((MIN_PORT..MAX_PORT + 1).collect()),
+        None => Arc::new((MIN_PORT..=MAX_PORT).collect()),
     };
 
     println!("Scanning {} with {:?} threads", ip_addr, cli.threads);
@@ -54,8 +54,11 @@ fn main() {
     let (tx, rx) = channel::<u32>();
     let rx = Arc::new(Mutex::new(rx));
     let rx_clone = rx.clone();
+    let terminating = Arc::new(AtomicBool::new(false));
+    let terminating_clone = terminating.clone();
 
     ctrlc::set_handler(move || {
+        terminating_clone.store(true, Ordering::Relaxed);
         print!("\nReceived <Ctrl+C> scan halted, displaying results...");
         display_results(rx_clone.lock().unwrap().try_iter().collect());
         std::process::exit(0);
@@ -63,12 +66,17 @@ fn main() {
     .expect("Error setting Ctrl-C handler");
 
     let ports_scanned = Arc::new(AtomicUsize::new(0));
+    let timeouts_count = Arc::new(AtomicUsize::new(0));
+    let open_ports_count = Arc::new(AtomicUsize::new(0));
     let mut handles = Vec::new();
 
     for i in 0..cli.threads {
         let tx = tx.clone();
         let ports_to_scan = ports_to_scan.clone();
         let ports_scanned = ports_scanned.clone();
+        let timeouts_count = timeouts_count.clone();
+        let open_ports_count = open_ports_count.clone();
+        let terminating_thread = terminating.clone();
         let handle = thread::spawn(move || {
             scan(
                 tx,
@@ -78,6 +86,9 @@ fn main() {
                 cli.threads,
                 cli.timeout,
                 ports_scanned,
+                timeouts_count,
+                open_ports_count,
+                terminating_thread,
             );
         });
         handles.push(handle);
@@ -112,6 +123,9 @@ fn scan(
     threads: u32,
     timeout: u64,
     ports_scanned: Arc<AtomicUsize>,
+    timeouts_count: Arc<AtomicUsize>,
+    open_ports_count: Arc<AtomicUsize>,
+    terminating: Arc<AtomicBool>,
 ) {
     // This function scans ports at positions
     // start_port_index,
@@ -130,18 +144,25 @@ fn scan(
         let address = format!("{}:{}", addr, port);
         let socket_add = address.to_socket_addrs().unwrap().next().unwrap();
         if TcpStream::connect_timeout(&socket_add, duration).is_ok() {
-            print!(".");
-            io::stdout().flush().unwrap();
             tx.send(port).unwrap();
+            open_ports_count.fetch_add(1, Ordering::Relaxed);
+        } else {
+            timeouts_count.fetch_add(1, Ordering::Relaxed);
         }
 
         let scanned = ports_scanned.fetch_add(1, Ordering::Relaxed) + 1;
         let progress = (scanned as f64 / total_ports as f64) * 100.0;
 
-        print!(
-            "\rProgress: {:.2}% (Scanned {} out of {})",
-            progress, scanned, total_ports
-        );
+        if !terminating.load(Ordering::Relaxed) {
+            print!(
+                "\rProgress: {:.2}% (Scanned Ports: {}/{}, Open Ports: {}, Closed Ports: {})",
+                progress,
+                scanned,
+                total_ports,
+                open_ports_count.load(Ordering::Relaxed),
+                timeouts_count.load(Ordering::Relaxed)
+            );
+        }
 
         io::stdout().flush().unwrap();
 

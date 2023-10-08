@@ -84,7 +84,7 @@ impl FromStr for Ports {
                 return Err(String::from("Invalid range: start must be less than end"));
             }
 
-            Ok(Ports((start..end).collect()))
+            Ok(Ports((start..=end).collect()))
         } else {
             let list: Result<Vec<u32>, _> = s
                 .split_whitespace()
@@ -94,7 +94,7 @@ impl FromStr for Ports {
             match list {
                 Ok(ports) => {
                     for port in ports.clone() {
-                        if !(MIN_PORT..MAX_PORT).contains(&port) {
+                        if !(MIN_PORT..=MAX_PORT).contains(&port) {
                             return Err(format!(
                         "Invalid port number specified. Port numbers should be in the range: {}-{}",
                         MIN_PORT, MAX_PORT));
