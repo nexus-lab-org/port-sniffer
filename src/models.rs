@@ -2,7 +2,16 @@ use super::constants::{MAX_PORT, MIN_PORT};
 use std::net::IpAddr;
 use std::str::FromStr;
 
+use clap::ValueEnum;
 use dns_lookup::lookup_host;
+
+
+#[derive(Clone, Debug, ValueEnum)]
+pub enum LogLevel {
+    INFO,
+    DEBUG,
+}
+
 
 #[derive(Clone, Debug)]
 pub enum IpOrDomain {
