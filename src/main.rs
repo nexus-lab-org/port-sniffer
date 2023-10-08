@@ -1,7 +1,11 @@
+#[macro_use]
+extern crate log;
+extern crate env_logger;
+
 use clap::Parser;
 use ctrlc;
 use nexuslab_port_sniffer::constants::{DEFAULT_THREADS, DEFAULT_TIMEOUT, MAX_PORT, MIN_PORT};
-use nexuslab_port_sniffer::models::{IpOrDomain, Ports};
+use nexuslab_port_sniffer::models::{IpOrDomain, Ports, LogLevel};
 use std::io::{self, Write};
 use std::net::{IpAddr, TcpStream, ToSocketAddrs};
 use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
@@ -31,25 +35,36 @@ struct Cli {
     /// scanned)
     #[clap(short = 'p', long, num_args=1..)]
     ports: Option<Ports>,
+
+    /// add a verbose flag
+    #[clap(long="log_level", default_value = "info")]
+    log_level: LogLevel,
 }
 
 fn main() {
     let cli = Cli::parse();
 
+    env_logger::Builder::new()
+        .filter_level(match cli.log_level {
+            LogLevel::INFO => log::LevelFilter::Info,
+            LogLevel::DEBUG => log::LevelFilter::Debug,
+        })
+        .init();
+    
     let ip_addr = match cli.ip_or_domain.resolve_to_ip() {
         Some(ip_addr) => ip_addr,
         None => {
-            eprintln!("Invalid domain or ip provided, please provide a valid one");
+            error!("Invalid domain or ip provided, please provide a valid one");
             return;
         }
     };
-
+    debug!("Resolved to ip: {}", ip_addr);
     let ports_to_scan: Arc<Vec<u32>> = match cli.ports {
         Some(ports) => Arc::new(ports.0),
         None => Arc::new((MIN_PORT..=MAX_PORT).collect()),
     };
 
-    println!("Scanning {} with {:?} threads", ip_addr, cli.threads);
+    debug!("Scanning {} with {:?} threads", ip_addr, cli.threads);
 
     let (tx, rx) = channel::<u32>();
     let rx = Arc::new(Mutex::new(rx));
@@ -107,7 +122,7 @@ fn display_results(open_ports: Vec<u32>) {
     let mut open = open_ports;
     open.sort();
     if open.is_empty() {
-        println!("None of the analysed ports were open");
+        info!("None of the analysed ports were open");
     } else {
         for port in open {
             println!("{} is open", port);
@@ -120,7 +135,7 @@ fn scan(
     ports_to_scan: Arc<Vec<u32>>,
     start_port_index: u32,
     addr: IpAddr,
-    threads: u32,
+    total_threads: u32,
     timeout: u64,
     ports_scanned: Arc<AtomicUsize>,
     timeouts_count: Arc<AtomicUsize>,
@@ -143,6 +158,7 @@ fn scan(
         let port = ports_to_scan[port_index as usize];
         let address = format!("{}:{}", addr, port);
         let socket_add = address.to_socket_addrs().unwrap().next().unwrap();
+        debug!("Scanning port {}", port);
         if TcpStream::connect_timeout(&socket_add, duration).is_ok() {
             tx.send(port).unwrap();
             open_ports_count.fetch_add(1, Ordering::Relaxed);
@@ -166,6 +182,6 @@ fn scan(
 
         io::stdout().flush().unwrap();
 
-        port_index += threads;
+        port_index += total_threads;
     }
 }
