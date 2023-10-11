@@ -6,7 +6,7 @@ use clap::ValueEnum;
 use dns_lookup::lookup_host;
 
 
-#[derive(Clone, Debug, ValueEnum)]
+#[derive(Clone, Debug, PartialEq, ValueEnum)]
 pub enum LogLevel {
     INFO,
     DEBUG,
