@@ -6,7 +6,7 @@ use clap::Parser;
 use colored::*;
 use indicatif::{ProgressBar, ProgressStyle};
 use nexuslab_port_sniffer::constants::{DEFAULT_THREADS, DEFAULT_TIMEOUT, MAX_PORT, MIN_PORT};
-use nexuslab_port_sniffer::models::{IpOrDomain, LogLevel, Ports};
+use nexuslab_port_sniffer::models::{IpOrDomain, LogLevel, PortRange};
 use std::net::{IpAddr, TcpStream, ToSocketAddrs};
 use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
 use std::sync::mpsc::{channel, Sender};
@@ -14,6 +14,7 @@ use std::sync::Arc;
 use std::sync::Mutex;
 use std::thread;
 use std::time::Duration;
+use std::collections::HashSet;
 
 #[derive(Parser)]
 #[clap(author, version, about, long_about = None)]
@@ -30,11 +31,12 @@ struct Cli {
     #[clap(long, default_value_t = DEFAULT_TIMEOUT)]
     timeout: u64,
 
-    /// Ports to be scanned (optional,
+    /// Port ranges to be scanned (optional,
     /// if unspecified, all ports will be
-    /// scanned)
+    /// scanned). A single port is also
+    /// considered a port range.
     #[clap(short = 'p', long, num_args=1..)]
-    ports: Option<Ports>,
+    port_ranges: Option<Vec<PortRange>>,
 
     /// add a verbose flag
     #[clap(long = "log_level", default_value = "info")]
@@ -59,10 +61,18 @@ fn main() {
         }
     };
     debug!("Resolved to ip: {}", ip_addr);
-    let ports_to_scan: Arc<Vec<u32>> = match cli.ports {
-        Some(ports) => Arc::new(ports.0),
-        None => Arc::new((MIN_PORT..MAX_PORT + 1).collect()),
+    let mut unique_ports: HashSet<u32> = HashSet::new(); 
+    match cli.port_ranges {
+        Some(port_ranges) => {
+            for port_range in port_ranges {
+                unique_ports.extend(port_range.0);
+            }
+        },
+        None => {
+            unique_ports.extend(MIN_PORT..MAX_PORT + 1);
+        }
     };
+    let ports_to_scan: Arc<Vec<u32>> = Arc::new(unique_ports.into_iter().collect());
     let pb: Option<Arc<Mutex<ProgressBar>>> = if cli.log_level != LogLevel::DEBUG {
         let progress_bar = ProgressBar::new(ports_to_scan.len() as u64).with_tab_width(4);
         progress_bar.set_style(
