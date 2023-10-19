@@ -8,6 +8,7 @@ use indicatif::{ProgressBar, ProgressStyle};
 use nexuslab_port_sniffer::constants::{DEFAULT_THREADS, DEFAULT_TIMEOUT, MAX_PORT, MIN_PORT};
 use nexuslab_port_sniffer::models::{IpOrDomain, LogLevel, PortRange};
 use std::net::{IpAddr, TcpStream, ToSocketAddrs};
+use std::process::ExitCode;
 use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
 use std::sync::mpsc::{channel, Sender};
 use std::sync::Arc;
@@ -41,9 +42,13 @@ struct Cli {
     /// add a verbose flag
     #[clap(long = "log_level", default_value = "info")]
     log_level: LogLevel,
+
+    /// Bare output
+    #[clap(long = "bare", short = 'b', default_value = "false")]
+    bare: bool,
 }
 
-fn main() {
+fn main() -> ExitCode {
     let cli = Cli::parse();
 
     env_logger::Builder::new()
@@ -57,7 +62,7 @@ fn main() {
         Some(ip_addr) => ip_addr,
         None => {
             error!("Invalid domain or ip provided, please provide a valid one");
-            return;
+            return ExitCode::FAILURE;
         }
     };
     debug!("Resolved to ip: {}", ip_addr);
@@ -96,7 +101,9 @@ fn main() {
                 "{}",
                 "\nReceived <Ctrl+C> scan halted".red().underline().bold()
             );
-            display_results(rx_clone.lock().unwrap().try_iter().collect());
+            if display_results(rx_clone.lock().unwrap().try_iter().collect(), cli.bare).is_err() {
+                std::process::exit(1);
+            }
         } else {
             debug!("Received <Ctrl+C> scan halted.");
         }
@@ -144,30 +151,38 @@ fn main() {
             progress_bar.lock().unwrap().finish();
         }
         if cli.log_level != LogLevel::DEBUG {
-            print!("{}", " Scanning Complete - Results ".bold().underline());
-            display_results(rx.lock().unwrap().iter().collect());
+            if !cli.bare {
+                println!("{}", " Scanning Complete - Results ".bold().underline());
+            }
+            if display_results(rx.lock().unwrap().iter().collect(), cli.bare).is_err() {
+                return ExitCode::FAILURE;
+            }
         } else {
             debug!("Scanning Complete");
         }
     }
+    ExitCode::SUCCESS
 }
 
-fn display_results(open_ports: Vec<u32>) {
-    println!();
+fn display_results(open_ports: Vec<u32>, bare: bool) -> Result<(), ()> {
     let mut open = open_ports;
     open.sort();
     if open.is_empty() {
+        if bare {
+            return Err(());
+        }
         println!(
             "{}",
-            format!("None of the analysed ports were open")
+            "None of the analysed ports were open".to_string()
                 .bold()
                 .dimmed()
         );
     } else {
         for port in open {
-            println!("{}", format!("  + Port {} is open", port).blue().bold());
+            println!("{}", if bare {port.to_string().normal()} else {format!("  + Port {} is open", port).blue().bold()});
         }
     }
+    Ok(())
 }
 
 fn scan(
