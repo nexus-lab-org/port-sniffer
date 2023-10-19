@@ -5,13 +5,11 @@ use std::str::FromStr;
 use clap::ValueEnum;
 use dns_lookup::lookup_host;
 
-
 #[derive(Clone, Debug, PartialEq, ValueEnum)]
 pub enum LogLevel {
     INFO,
     DEBUG,
 }
-
 
 #[derive(Clone, Debug)]
 pub enum IpOrDomain {
@@ -64,18 +62,28 @@ impl FromStr for IpOrDomain {
 }
 
 #[derive(Clone, Debug, PartialEq)]
-pub struct Ports(pub Vec<u32>);
 
-impl FromStr for Ports {
+// A PortRange maybe specified on the
+// command line as a single port number
+// say a, where a is a valid port number
+// or maybe specified on the command
+// line as a-b where a and b are valid 
+// port numbers. The inner parameter
+// stores all the ports represented by 
+// the range.
+pub struct PortRange(pub Vec<u32>);
+
+impl FromStr for PortRange {
     type Err = String;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        // Allow port range format of x-yyyyy
         if s.contains('-') {
+
+            // Port range is of the form a-b
             let parts: Vec<&str> = s.split('-').collect();
             if parts.len() != 2 {
                 return Err(String::from(
-                    "Invalid range format. Expected format: start-end",
+                    "Invalid range format: Expected format: start-end",
                 ));
             }
 
@@ -84,34 +92,37 @@ impl FromStr for Ports {
 
             if end > MAX_PORT {
                 return Err(format!(
-                    "Invalid port range: start and end must be within the limits of {}-{}",
+                    "Invalid port range: start and end port numbers must be in the range {}-{}",
                     MIN_PORT, MAX_PORT
                 ));
             }
 
             if start >= end {
-                return Err(String::from("Invalid range: start must be less than end"));
+                return Err(String::from(
+                    "Invalid port range: start port number must be less than the end port number",
+                ));
             }
 
-            Ok(Ports((start..end+1).collect()))
+            Ok(PortRange((start..end + 1).collect()))
         } else {
-            let list: Result<Vec<u32>, _> = s
-                .split_whitespace()
-                .map(|p| p.parse::<u32>().map_err(|e| e.to_string()))
-                .collect();
 
-            match list {
-                Ok(ports) => {
-                    for port in ports.clone() {
-                        if !(MIN_PORT..MAX_PORT).contains(&port) {
-                            return Err(format!(
-                        "Invalid port number specified. Port numbers should be in the range: {}-{}",
-                        MIN_PORT, MAX_PORT));
-                        }
+            // The port range consists of a single port
+            // number.
+            match s.parse::<u32>() {
+                Ok(port) => {
+                    if (MIN_PORT..MAX_PORT + 1).contains(&port) {
+                        Ok(PortRange(vec![port]))
                     }
-                    Ok(Ports(ports))
+                    else {
+                        Err(format!(
+                            "Invalid port number: Port numbers should be in the range {}-{}",
+                            MIN_PORT, MAX_PORT
+                        ))
+                    }
                 }
-                Err(e) => Err(e),
+                Err(_) => {
+                    Err(String :: from("Invalid port number"))
+                }
             }
         }
     }
@@ -125,35 +136,38 @@ mod tests {
 
     #[test]
     fn test_from_str() {
-        // Test valid port list
-        let input = "80 443 8080";
-        let expected_output = Ports(vec![80, 443, 8080]);
-        assert_eq!(Ports::from_str(input).unwrap(), expected_output);
+        // // Test valid port list
+        // let input = "80 443 8080";
+        // let expected_output = Ports(vec![80, 443, 8080]);
+        // assert_eq!(Ports::from_str(input).unwrap(), expected_output);
 
         // Test valid port range
         let input = "1000-2000";
-        let expected_output = Ports((1000..2001).collect());
-        assert_eq!(Ports::from_str(input).unwrap(), expected_output);
+        let expected_output = PortRange((1000..2001).collect());
+        assert_eq!(PortRange::from_str(input).unwrap(), expected_output);
 
         // Test invalid port range
         let input = "2000-1000";
-        let expected_error = "Invalid range: start must be less than end";
-        assert_eq!(Ports::from_str(input).unwrap_err(), expected_error);
+        let expected_error = "Invalid port range: start port number must be less than the end port number";
+        assert_eq!(PortRange::from_str(input).unwrap_err(), expected_error);
 
         // Test invalid port number
         let input = "65536";
-        let expected_error = "Invalid port number specified. Port numbers should be in the range: 0-65535";
-        assert_eq!(Ports::from_str(input).unwrap_err(), expected_error);
+        let expected_error =
+            format!("Invalid port number: Port numbers should be in the range {}-{}", MIN_PORT, MAX_PORT);
+        assert_eq!(PortRange::from_str(input).unwrap_err(), expected_error);
 
         // Test invalid range format
         let input = "1000-2000-3000";
-        let expected_error = "Invalid range format. Expected format: start-end";
-        assert_eq!(Ports::from_str(input).unwrap_err(), expected_error);
+        let expected_error = "Invalid range format: Expected format: start-end";
+        assert_eq!(PortRange::from_str(input).unwrap_err(), expected_error);
 
         // Test invalid port range
         let input = "65535-65536";
-        let expected_error = "Invalid port range: start and end must be within the limits of 0-65535";
-        assert_eq!(Ports::from_str(input).unwrap_err(), expected_error);
+        let expected_error =
+            format!("Invalid port range: start and end port numbers must be in the range {}-{}",
+            MIN_PORT, MAX_PORT);
+        assert_eq!(PortRange::from_str(input).unwrap_err(), expected_error);
     }
 
     #[test]
