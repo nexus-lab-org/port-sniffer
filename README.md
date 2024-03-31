@@ -7,14 +7,14 @@ Port Sniffer is a command-line tool built with Rust that helps you find all the 
 You can install Port Sniffer using [Cargo](https://doc.rust-lang.org/cargo/), the Rust package manager. First, make sure you have Rust installed on your system. Then, run the following command:
 
 ```sh
-cargo install port-sniffer
+cargo install nexuslab_port_sniffer --name port_sniffer
 ```
 
 This will download the source code, compile it, and install the `port-sniffer` binary in your system's binary directory (usually `~/.cargo/bin/`).
 
 ## Usage
 
-To use Port Sniffer, simply run the `port-sniffer` command followed by the hostname or IP address you want to scan.
+To use Port Sniffer, simply run the `port_sniffer` command followed by the hostname or IP address you want to scan.
 
 `port_sniffer [OPTIONS] <IP_OR_DOMAIN>`
 
