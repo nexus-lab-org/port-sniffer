@@ -1,0 +1,528 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Port Sniffer - A fast, concurrent port scanner built with Rust">
+    <meta name="keywords" content="port scanner, rust, networking, security, open ports">
+    <title>Port Sniffer - Fast Port Scanning Tool</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --primary: #FF6B35;
+            --secondary: #004E89;
+            --accent: #1B998B;
+            --dark: #1a1a1a;
+            --light: #f5f5f5;
+            --gray: #666;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 20px;
+        }
+
+        header {
+            background: linear-gradient(135deg, var(--secondary) 0%, var(--dark) 100%);
+            color: white;
+            padding: 80px 20px;
+            text-align: center;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+        }
+
+        header h1 {
+            font-size: 3.5rem;
+            margin-bottom: 10px;
+            font-weight: 700;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
+        }
+
+        header p {
+            font-size: 1.3rem;
+            color: #e0e0e0;
+            margin-bottom: 30px;
+        }
+
+        .cta-buttons {
+            display: flex;
+            gap: 20px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            padding: 12px 30px;
+            font-size: 1rem;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            font-weight: 600;
+            display: inline-block;
+        }
+
+        .btn-primary {
+            background: var(--primary);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #e55a2a;
+            transform: translateY(-2px);
+            box-shadow: 0 8px 15px rgba(255, 107, 53, 0.3);
+        }
+
+        .btn-secondary {
+            background: transparent;
+            color: white;
+            border: 2px solid white;
+        }
+
+        .btn-secondary:hover {
+            background: white;
+            color: var(--secondary);
+            transform: translateY(-2px);
+        }
+
+        section {
+            background: white;
+            margin: 40px auto;
+            padding: 60px 40px;
+            border-radius: 10px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.08);
+            max-width: 1000px;
+        }
+
+        h2 {
+            font-size: 2.2rem;
+            color: var(--secondary);
+            margin-bottom: 30px;
+            border-bottom: 3px solid var(--primary);
+            padding-bottom: 15px;
+        }
+
+        h3 {
+            font-size: 1.5rem;
+            color: var(--secondary);
+            margin-top: 25px;
+            margin-bottom: 15px;
+        }
+
+        .features {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 30px;
+            margin-top: 40px;
+        }
+
+        .feature-card {
+            padding: 25px;
+            border-left: 4px solid var(--primary);
+            background: linear-gradient(135deg, #f9f9f9 0%, #f0f0f0 100%);
+            border-radius: 6px;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .feature-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 20px rgba(0,0,0,0.1);
+        }
+
+        .feature-card h3 {
+            margin-top: 0;
+            color: var(--accent);
+        }
+
+        .feature-card p {
+            color: var(--gray);
+            line-height: 1.8;
+        }
+
+        code {
+            background: #f4f4f4;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-family: 'Monaco', 'Menlo', 'Courier New', monospace;
+            color: var(--secondary);
+        }
+
+        pre {
+            background: #2d2d2d;
+            color: #f8f8f2;
+            padding: 20px;
+            border-radius: 6px;
+            overflow-x: auto;
+            font-family: 'Monaco', 'Menlo', 'Courier New', monospace;
+            font-size: 0.95rem;
+            line-height: 1.5;
+            margin: 20px 0;
+        }
+
+        .usage-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+            font-size: 0.95rem;
+        }
+
+        .usage-table th {
+            background: var(--secondary);
+            color: white;
+            padding: 12px;
+            text-align: left;
+            font-weight: 600;
+        }
+
+        .usage-table td {
+            padding: 12px;
+            border-bottom: 1px solid #ddd;
+        }
+
+        .usage-table tr:hover {
+            background: #f9f9f9;
+        }
+
+        .installation-steps {
+            counter-reset: step-counter;
+            list-style: none;
+        }
+
+        .installation-steps li {
+            counter-increment: step-counter;
+            margin-bottom: 20px;
+            padding-left: 40px;
+            position: relative;
+        }
+
+        .installation-steps li::before {
+            content: counter(step-counter);
+            position: absolute;
+            left: 0;
+            top: 0;
+            background: var(--primary);
+            color: white;
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 600;
+        }
+
+        footer {
+            background: var(--dark);
+            color: white;
+            text-align: center;
+            padding: 30px;
+            margin-top: 60px;
+        }
+
+        footer a {
+            color: var(--primary);
+            text-decoration: none;
+        }
+
+        footer a:hover {
+            text-decoration: underline;
+        }
+
+        .github-badge {
+            display: inline-block;
+            margin-top: 10px;
+        }
+
+        @media (max-width: 768px) {
+            header h1 {
+                font-size: 2.5rem;
+            }
+
+            header p {
+                font-size: 1.1rem;
+            }
+
+            section {
+                padding: 40px 20px;
+            }
+
+            h2 {
+                font-size: 1.8rem;
+            }
+
+            .cta-buttons {
+                flex-direction: column;
+                align-items: center;
+            }
+
+            .btn {
+                width: 100%;
+                max-width: 300px;
+            }
+        }
+
+        .highlight {
+            color: var(--primary);
+            font-weight: 600;
+        }
+
+        .example-box {
+            background: #f9f9f9;
+            border-left: 4px solid var(--accent);
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 6px;
+        }
+
+        .example-box strong {
+            color: var(--accent);
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="container">
+            <h1>🎯 Port Sniffer</h1>
+            <p>Lightning-fast concurrent port scanning tool built with Rust</p>
+            <div class="cta-buttons">
+                <a href="#installation" class="btn btn-primary">Get Started</a>
+                <a href="https://github.com/nexus-lab-org/port-sniffer" class="btn btn-secondary">View on GitHub</a>
+            </div>
+        </div>
+    </header>
+
+    <section id="about">
+        <div class="container">
+            <h2>About Port Sniffer</h2>
+            <p>Port Sniffer is a <span class="highlight">high-performance command-line tool</span> that helps you discover all open ports on a given host. Built with Rust for speed and reliability, it leverages native OS threads to scan ports concurrently, making it significantly faster than traditional sequential port scanning tools.</p>
+            <p style="margin-top: 20px;">Whether you're a system administrator, security researcher, or developer, Port Sniffer provides a fast and efficient way to identify open ports on network hosts.</p>
+        </div>
+    </section>
+
+    <section id="features">
+        <div class="container">
+            <h2>Key Features</h2>
+            <div class="features">
+                <div class="feature-card">
+                    <h3>⚡ Concurrent Scanning</h3>
+                    <p>Uses native OS threads to scan multiple ports simultaneously, delivering blazing-fast results compared to sequential scanning.</p>
+                </div>
+                <div class="feature-card">
+                    <h3>🛠️ Fully Customizable</h3>
+                    <p>Configure thread count, timeout values, specific port ranges, and logging levels to suit your needs.</p>
+                </div>
+                <div class="feature-card">
+                    <h3>🔧 Easy to Use</h3>
+                    <p>Simple command-line interface with sensible defaults. Just provide a hostname or IP address and get results.</p>
+                </div>
+                <div class="feature-card">
+                    <h3>📊 Flexible Output</h3>
+                    <p>Get detailed formatted results or use bare mode for plain port numbers, perfect for scripting and automation.</p>
+                </div>
+                <div class="feature-card">
+                    <h3>🚀 Cross-Platform</h3>
+                    <p>Works on Linux, macOS, and Windows. Install via Cargo and use anywhere Rust is supported.</p>
+                </div>
+                <div class="feature-card">
+                    <h3>📝 Open Source</h3>
+                    <p>MIT licensed with an active community. Contribute, report issues, and help improve Port Sniffer.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section id="installation">
+        <div class="container">
+            <h2>Installation</h2>
+            <p>Port Sniffer is distributed via <a href="https://crates.io/">crates.io</a>, the Rust package registry. Make sure you have <a href="https://www.rust-lang.org/tools/install">Rust installed</a> on your system.</p>
+
+            <h3>Install via Cargo</h3>
+            <pre><code>cargo install nexuslab_port_sniffer --name port_sniffer</code></pre>
+
+            <p style="margin-top: 20px;">This command downloads the source code, compiles it, and installs the <code>port_sniffer</code> binary in your system's binary directory (usually <code>~/.cargo/bin/</code>).</p>
+
+            <div class="example-box">
+                <strong>Verification:</strong><br>
+                After installation, verify it works by running: <code>port_sniffer --version</code>
+            </div>
+        </div>
+    </section>
+
+    <section id="usage">
+        <div class="container">
+            <h2>Usage</h2>
+            <p>Once installed, use the <code>port_sniffer</code> command to scan for open ports on a target host.</p>
+
+            <h3>Basic Syntax</h3>
+            <pre><code>port_sniffer [OPTIONS] &lt;IP_OR_DOMAIN&gt;</code></pre>
+
+            <h3>Quick Examples</h3>
+            <div class="example-box">
+                <strong>Scan localhost on all ports:</strong><br>
+                <code>port_sniffer 127.0.0.1</code>
+            </div>
+
+            <div class="example-box">
+                <strong>Scan a specific domain with 20 threads:</strong><br>
+                <code>port_sniffer --threads 20 example.com</code>
+            </div>
+
+            <div class="example-box">
+                <strong>Scan specific port range:</strong><br>
+                <code>port_sniffer --ports 80-8080 192.168.1.1</code>
+            </div>
+
+            <div class="example-box">
+                <strong>Get bare output for scripting:</strong><br>
+                <code>port_sniffer --bare 127.0.0.1</code>
+            </div>
+
+            <h3>Options</h3>
+            <table class="usage-table">
+                <thead>
+                    <tr>
+                        <th>Option</th>
+                        <th>Short</th>
+                        <th>Long</th>
+                        <th>Description</th>
+                        <th>Default</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>Number of threads</td>
+                        <td>-t</td>
+                        <td>--threads</td>
+                        <td>Number of concurrent threads</td>
+                        <td>10</td>
+                    </tr>
+                    <tr>
+                        <td>Timeout</td>
+                        <td>-</td>
+                        <td>--timeout</td>
+                        <td>Connection timeout in seconds</td>
+                        <td>2</td>
+                    </tr>
+                    <tr>
+                        <td>Ports</td>
+                        <td>-p</td>
+                        <td>--ports</td>
+                        <td>Ports to scan (hostname or range)</td>
+                        <td>All (1-65535)</td>
+                    </tr>
+                    <tr>
+                        <td>Log level</td>
+                        <td>-</td>
+                        <td>--log_level</td>
+                        <td>Log verbosity (info or debug)</td>
+                        <td>info</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <h3>Flags</h3>
+            <table class="usage-table">
+                <thead>
+                    <tr>
+                        <th>Flag</th>
+                        <th>Short</th>
+                        <th>Long</th>
+                        <th>Description</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>Bare output</td>
+                        <td>-b</td>
+                        <td>--bare</td>
+                        <td>Output plain port numbers (newline-separated)</td>
+                    </tr>
+                    <tr>
+                        <td>Help</td>
+                        <td>-h</td>
+                        <td>--help</td>
+                        <td>Print help information</td>
+                    </tr>
+                    <tr>
+                        <td>Version</td>
+                        <td>-V</td>
+                        <td>--version</td>
+                        <td>Print version information</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </section>
+
+    <section id="contributing">
+        <div class="container">
+            <h2>Contributing</h2>
+            <p>We welcome contributions from the community! Whether it's bug reports, feature requests, or code improvements, your help makes Port Sniffer better.</p>
+
+            <h3>How to Contribute</h3>
+            <ol class="installation-steps">
+                <li>
+                    <strong>Fork the repository</strong><br>
+                    Click the "Fork" button on the <a href="https://github.com/nexus-lab-org/port-sniffer">GitHub repository</a>
+                </li>
+                <li>
+                    <strong>Clone your fork locally</strong><br>
+                    <code>git clone https://github.com/your-username/port-sniffer</code>
+                </li>
+                <li>
+                    <strong>Create a feature branch</strong><br>
+                    <code>git checkout -b feature/your-feature-name</code>
+                </li>
+                <li>
+                    <strong>Make your changes</strong><br>
+                    Edit, test, and refine your code
+                </li>
+                <li>
+                    <strong>Commit and push</strong><br>
+                    <code>git commit -m "Your descriptive message"</code><br>
+                    <code>git push origin feature/your-feature-name</code>
+                </li>
+                <li>
+                    <strong>Open a pull request</strong><br>
+                    Submit your PR with a clear description of your changes
+                </li>
+            </ol>
+
+            <p style="margin-top: 30px;">Please review our <a href="https://github.com/nexus-lab-org/port-sniffer/blob/master/CONTRIBUTING.md">contribution guidelines</a> for more details.</p>
+        </div>
+    </section>
+
+    <section id="license">
+        <div class="container">
+            <h2>License</h2>
+            <p>Port Sniffer is licensed under the <strong>MIT License</strong>, which means you're free to use, modify, and distribute it for commercial and private purposes, as long as you include the license notice.</p>
+            <p><a href="https://github.com/nexus-lab-org/port-sniffer/blob/master/LICENSE">View the full license</a></p>
+        </div>
+    </section>
+
+    <footer>
+        <div class="container">
+            <p>&copy; 2024 Port Sniffer. Built with ❤️ by the NexusLab community.</p>
+            <p style="margin-top: 15px; color: #999; font-size: 0.9rem;">
+                <a href="https://github.com/nexus-lab-org/port-sniffer">GitHub Repository</a> •
+                <a href="https://crates.io/crates/nexuslab_port_sniffer">crates.io</a> •
+                <a href="https://github.com/nexus-lab-org/port-sniffer/issues">Report Issues</a>
+            </p>
+        </div>
+    </footer>
+</body>
+</html>
